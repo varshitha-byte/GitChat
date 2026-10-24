@@ -420,21 +420,54 @@ document.addEventListener('DOMContentLoaded', () => {
     if (citations && citations.length > 0) {
       citationsHtml = `
         <div class="citations-wrapper">
-          <div class="citations-title">Verified Source Citations (Click to View):</div>
+          <div class="citations-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <span>Verified Source Citations (${citations.length})</span>
+          </div>
           <div class="citations-pills">
-            ${citations.map(c => `
-              <button class="citation-pill" data-file="${escapeHtml(c.file_path)}" data-start="${c.start_line}" data-end="${c.end_line}">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                </svg>
-                ${escapeHtml(c.file_path)}:L${c.start_line}-L${c.end_line}
-              </button>
-            `).join('')}
+            ${citations.map(c => {
+              const start = c.start_line || 1;
+              const end = c.end_line || start;
+              const rangeText = (start !== end) ? `:L${start}-L${end}` : `:L${start}`;
+              return `
+                <button class="citation-pill" data-file="${escapeHtml(c.file_path)}" data-start="${start}" data-end="${end}" title="Click to inspect ${escapeHtml(c.file_path)} in code viewer">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                  </svg>
+                  <span class="citation-path">${escapeHtml(c.file_path)}</span>
+                  <span class="citation-lines">${rangeText}</span>
+                </button>
+              `;
+            }).join('')}
           </div>
         </div>
       `;
     }
+
+    const isWarning = confidence && (confidence.includes('Not Found') || confidence.includes('Low'));
+    const confidenceBadge = confidence ? `
+      <div class="message-meta-header">
+        <span class="confidence-badge ${isWarning ? 'warning' : 'verified'}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            ${isWarning 
+              ? '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>' 
+              : '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>'}
+          </svg>
+          <span>${escapeHtml(confidence)}</span>
+        </span>
+        <button class="copy-answer-btn" title="Copy full response to clipboard">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span>Copy</span>
+        </button>
+      </div>
+    ` : '';
 
     el.innerHTML = `
       <div class="message-avatar">
@@ -444,10 +477,79 @@ document.addEventListener('DOMContentLoaded', () => {
         </svg>
       </div>
       <div class="message-content">
-        ${renderMarkdown(markdown)}
+        ${confidenceBadge}
+        <div class="markdown-body">${renderMarkdown(markdown)}</div>
         ${citationsHtml}
       </div>
     `;
+
+    // Copy full response handler
+    const copyAnsBtn = el.querySelector('.copy-answer-btn');
+    if (copyAnsBtn) {
+      copyAnsBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(markdown).then(() => {
+          copyAnsBtn.innerHTML = `
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>Copied!</span>
+          `;
+          setTimeout(() => {
+            copyAnsBtn.innerHTML = `
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Copy</span>
+            `;
+          }, 1800);
+        });
+      });
+    }
+
+    // Attach copy button and language tag to each <pre> code block
+    el.querySelectorAll('.markdown-body pre').forEach(pre => {
+      if (!pre.querySelector('.code-block-header')) {
+        const code = pre.querySelector('code');
+        const langMatch = code ? code.className.match(/language-([a-zA-Z0-9_\-]+)/) : null;
+        const lang = langMatch ? langMatch[1] : (pre.dataset.lang || 'code');
+        const header = document.createElement('div');
+        header.className = 'code-block-header';
+        header.innerHTML = `
+          <span class="code-lang-label">${lang}</span>
+          <button class="copy-snippet-btn" title="Copy code snippet">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>Copy</span>
+          </button>
+        `;
+        pre.insertBefore(header, pre.firstChild);
+        const copyBtn = header.querySelector('.copy-snippet-btn');
+        copyBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const rawCode = code ? code.textContent : pre.textContent;
+          navigator.clipboard.writeText(rawCode.trim()).then(() => {
+            copyBtn.innerHTML = `
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Copied!</span>
+            `;
+            setTimeout(() => {
+              copyBtn.innerHTML = `
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span>Copy</span>
+              `;
+            }, 1800);
+          });
+        });
+      }
+    });
 
     // Attach click listeners to citations
     el.querySelectorAll('.citation-pill').forEach(pill => {
@@ -459,21 +561,57 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
+    // Make any inline code file references inside markdown clickable too
+    el.querySelectorAll('.markdown-body :not(pre) > code').forEach(codeEl => {
+      const text = codeEl.textContent.trim().replace(/^\[|\]$/g, '').trim();
+      const match = text.match(/^([\w\-_.\/]+\.[a-zA-Z0-9]+)(?::(?:L)?(\d+)(?:-(?:L)?(\d+))?)?$/);
+      if (match) {
+        const filePath = match[1];
+        const start = match[2] ? parseInt(match[2], 10) : 1;
+        const end = match[3] ? parseInt(match[3], 10) : start;
+        codeEl.classList.add('inline-citation-link');
+        codeEl.title = `Click to inspect ${filePath}:${start}-${end} in code viewer`;
+        codeEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openFileInViewer(filePath, start, end);
+        });
+      }
+    });
+
     chatMessages.appendChild(el);
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
   clearChatBtn.addEventListener('click', () => {
     chatMessages.innerHTML = `
-      <div class="message assistant-message welcome-message">
-        <div class="message-avatar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="16 18 22 12 16 6"></polyline>
-            <polyline points="8 6 2 12 8 18"></polyline>
-          </svg>
+      <div class="welcome-banner" id="welcome-banner">
+        <div class="welcome-header">
+          <span class="welcome-badge">SYSTEM READY</span>
+          <h2 class="welcome-title">Codebase Retrieval & Architecture Engine</h2>
         </div>
-        <div class="message-content">
-          <p>Conversation cleared. Ready for new questions!</p>
+        <p class="welcome-lead">Grounded software intelligence engine with hybrid AST syntax chunking and verified line citations.</p>
+        <div class="welcome-steps-grid">
+          <div class="welcome-step">
+            <span class="step-num">01</span>
+            <div class="step-content">
+              <strong>Index Repository</strong>
+              <span>Paste any public GitHub URL or drop a local project zip.</span>
+            </div>
+          </div>
+          <div class="welcome-step">
+            <span class="step-num">02</span>
+            <div class="step-content">
+              <strong>Hybrid Retrieval</strong>
+              <span>BM25 lexical matching combined with dense vector embeddings.</span>
+            </div>
+          </div>
+          <div class="welcome-step">
+            <span class="step-num">03</span>
+            <div class="step-content">
+              <strong>Inspect Citations</strong>
+              <span>Click any line citation to jump directly to code in the inspector.</span>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -571,28 +709,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderMarkdown(md) {
     if (!md) return '';
-    // Format headers
-    let html = md.replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                 .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-                 .replace(/^# (.*$)/gim, '<h1>$1</h1>');
 
-    // Format bold & code
-    html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-               .replace(/\*(.*?)\*/gim, '<em>$1</em>');
+    // Step 1: Normalize all line endings (CRLF -> LF)
+    let cleanMd = md.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-    // Format code blocks
-    html = html.replace(/```([a-zA-Z]*)\n([\s\S]*?)```/gm, (match, lang, code) => {
-      return `<pre><code class="language-${lang}">${escapeHtml(code)}</code></pre>`;
+    // Priority 1: Use full marked.js parser if available
+    if (typeof marked !== 'undefined') {
+      try {
+        if (typeof marked.parse === 'function') {
+          return marked.parse(cleanMd, { gfm: true, breaks: true });
+        } else if (typeof marked === 'function') {
+          return marked(cleanMd);
+        }
+      } catch (err) {
+        console.warn('Marked parse error, using fallback:', err);
+      }
+    }
+
+    // Priority 2: Robust multi-level Markdown Fallback Parser
+    let html = escapeHtml(cleanMd);
+
+    // Code blocks with syntax language tags
+    html = html.replace(/```([a-zA-Z0-9_\-]*)\n([\s\S]*?)```/gm, (match, lang, code) => {
+      const language = lang || 'text';
+      return `<pre data-lang="${language}"><code class="language-${language}">${code.trim()}</code></pre>`;
     });
 
-    // Format inline code
+    // Headers h1 to h6
+    html = html.replace(/^###### (.*$)/gim, '<h6>$1</h6>')
+               .replace(/^##### (.*$)/gim, '<h5>$1</h5>')
+               .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
+               .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+               .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+               .replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+    // Bold, Italic
+    html = html.replace(/\*\*\*(.*?)\*\*\*/gim, '<strong><em>$1</em></strong>')
+               .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+               .replace(/\*(.*?)\*/gim, '<em>$1</em>');
+
+    // Inline code
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-    // Format markdown links into clickable elements
+    // Blockquotes
+    html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+
+    // Unordered lists
+    html = html.replace(/^\s*[-*+]\s+(.*$)/gim, '<li>$1</li>');
+    html = html.replace(/(<li>[\s\S]*?<\/li>)/gim, '<ul>$1</ul>');
+    html = html.replace(/<\/ul>\s*<ul>/gim, '');
+
+    // Ordered lists
+    html = html.replace(/^\s*\d+\.\s+(.*$)/gim, '<li>$1</li>');
+
+    // Links
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
-    // Format newlines
-    html = html.replace(/\n\n/g, '<br><br>');
+    // Paragraph line breaks
+    html = html.replace(/\n{2,}/g, '</p><p>');
+    html = '<p>' + html + '</p>';
+    html = html.replace(/<p>\s*<\/p>/g, '')
+               .replace(/<p>\s*(<h[1-6]>.*?<\/h[1-6]>)\s*<\/p>/g, '$1')
+               .replace(/<p>\s*(<pre[\s\S]*?<\/pre>)\s*<\/p>/g, '$1')
+               .replace(/<p>\s*(<ul>[\s\S]*?<\/ul>)\s*<\/p>/g, '$1')
+               .replace(/<p>\s*(<blockquote>[\s\S]*?<\/blockquote>)\s*<\/p>/g, '$1');
+
     return html;
   }
 

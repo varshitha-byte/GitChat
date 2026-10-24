@@ -29,3 +29,11 @@ repos/
 .DS_Store
 Thumbs.db
 .freebuff/
+
+# Agent & Assistant Cache
+.agent/
+.agents/
+.codex/
+.gemini/
+.impeccable/
+.opencode/

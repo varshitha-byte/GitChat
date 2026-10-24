@@ -80,9 +80,9 @@ class VectorStore:
         else:
             sims = np.dot(self.embeddings_matrix, q_vec)
 
-        # Get top-k indices
+        # Get top-k indices with meaningful similarity
         top_indices = np.argsort(sims)[::-1][:top_k]
-        return [(self.chunks[i], float(sims[i])) for i in top_indices]
+        return [(self.chunks[i], float(sims[i])) for i in top_indices if float(sims[i]) > 0.08]
 
     def sparse_search(self, query: str, top_k: int = 10) -> List[Tuple[CodeChunk, float]]:
         """

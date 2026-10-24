@@ -128,7 +128,9 @@ def query_codebase(request: QueryRequest):
         context=context,
         citations=citations,
         provider=request.provider,
-        api_key=request.api_key
+        api_key=request.api_key,
+        repo_id=request.repo_id,
+        store=store
     )
 
     elapsed_ms = round((time.time() - start_time) * 1000, 2)

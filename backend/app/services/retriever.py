@@ -64,11 +64,25 @@ class HybridRetriever:
         context_blocks: List[str] = []
 
         for idx, (chunk, score) in enumerate(top_chunks, 1):
+            # Clean multiline snippet extraction: preserve clean line breaks rather than chopping words mid-sentence
+            content = chunk.content.strip()
+            lines = content.splitlines()
+            if len(lines) > 16:
+                clean_snippet = "\n".join(lines[:16]) + "\n    # ... [truncated for citation]"
+            elif len(content) > 750:
+                cut = content[:750].rfind("\n")
+                if cut > 200:
+                    clean_snippet = content[:cut] + "\n    # ... [truncated for citation]"
+                else:
+                    clean_snippet = content[:750] + "..."
+            else:
+                clean_snippet = content
+
             citations.append(Citation(
                 file_path=chunk.file_path,
                 start_line=chunk.start_line,
                 end_line=chunk.end_line,
-                snippet=chunk.content[:400] + ("..." if len(chunk.content) > 400 else ""),
+                snippet=clean_snippet,
                 score=round(score, 4),
                 scope_name=chunk.scope_name,
                 language=chunk.language
