@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeRAG AI — Developer Assistant & Codebase Knowledge Engine</title>
+  <meta name="description" content="Production-grade Codebase RAG system for software engineers. Ingest GitHub repositories, perform hybrid semantic-keyword retrieval, and ask deep architectural questions with grounded citations.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <!-- Top Navigation Header -->
+  <header class="navbar" id="app-navbar">
+    <div class="nav-brand">
+      <div class="brand-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="16 18 22 12 16 6"></polyline>
+          <polyline points="8 6 2 12 8 18"></polyline>
+          <line x1="12" y1="2" x2="12" y2="22" stroke-dasharray="2 2"></line>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">CodeRAG <span class="gradient-text">Assistant</span></h1>
+        <span class="brand-tagline">Hybrid RAG • Code-Aware Syntax Chunking • Grounded Citations</span>
+      </div>
+    </div>
+    
+    <div class="nav-actions">
+      <div class="status-indicator" id="repo-status-badge">
+        <span class="status-dot disconnected"></span>
+        <span id="active-repo-name">No Repository Ingested</span>
+      </div>
+      
+      <button class="btn btn-secondary" id="open-settings-btn" title="Configure LLM & API Keys">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Model Settings</span>
+      </button>
+
+      <a href="/docs" target="_blank" class="btn btn-ghost" title="View OpenAPI Swagger Documentation">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        <span>Swagger API</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main 3-Pane Layout -->
+  <main class="app-layout">
+    <!-- Left Sidebar: Ingestion & Explorer -->
+    <aside class="sidebar-pane" id="sidebar-pane">
+      <!-- Repo Ingestion Card -->
+      <section class="card ingestion-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+            Ingest Codebase
+          </h2>
+        </div>
+
+        <form id="ingest-form" class="ingest-form">
+          <div class="input-group">
+            <label for="repo-url-input">GitHub Repository URL</label>
+            <input 
+              type="url" 
+              id="repo-url-input" 
+              placeholder="https://github.com/owner/repository"
+              required
+            >
+          </div>
+
+          <div class="quick-samples">
+            <span class="sample-label">Try popular repos:</span>
+            <div class="sample-chips">
+              <button type="button" class="chip sample-repo-chip" data-url="https://github.com/pallets/flask">Flask</button>
+              <button type="button" class="chip sample-repo-chip" data-url="https://github.com/tiangolo/fastapi">FastAPI</button>
+              <button type="button" class="chip sample-repo-chip" data-url="https://github.com/expressjs/express">Express</button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="clone-btn">
+            <span class="btn-text">Clone & Build Index</span>
+            <div class="spinner" id="clone-spinner"></div>
+          </button>
+        </form>
+
+        <div class="divider"><span>OR UPLOAD ZIP</span></div>
+
+        <div class="zip-dropzone" id="zip-dropzone">
+          <input type="file" id="zip-file-input" accept=".zip" hidden>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <p>Drop a <code>.zip</code> codebase here</p>
+          <span class="drop-hint">or click to browse local files</span>
+        </div>
+      </section>
+
+      <!-- Ingested Repositories Picker -->
+      <section class="card repos-list-card" id="repos-list-section">
+        <div class="card-header">
+          <h3 class="card-subtitle">Indexed Repositories</h3>
+          <span class="badge" id="repos-count-badge">0</span>
+        </div>
+        <div class="repo-selector-list" id="repo-selector-list">
+          <div class="empty-state">No repositories indexed yet.</div>
+        </div>
+      </section>
+
+      <!-- Repository Statistics & Language Breakdown -->
+      <section class="card stats-card" id="stats-section" style="display: none;">
+        <div class="card-header">
+          <h3 class="card-subtitle">Codebase Telemetry</h3>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-value" id="stat-files">0</span>
+            <span class="stat-label">Files</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-value" id="stat-chunks">0</span>
+            <span class="stat-label">Chunks</span>
+          </div>
+        </div>
+        <div class="languages-bar" id="languages-container"></div>
+      </section>
+
+      <!-- Interactive File Tree -->
+      <section class="card file-tree-card" id="file-tree-section">
+        <div class="card-header">
+          <h3 class="card-subtitle">Repository File Tree</h3>
+        </div>
+        <div class="file-tree-container" id="file-tree-container">
+          <div class="empty-state">Ingest a repository to view source tree.</div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Center Pane: Chat & Query Assistant -->
+    <section class="chat-pane" id="chat-pane">
+      <div class="chat-header">
+        <div>
+          <h2 class="chat-title">AI Software Engineering Assistant</h2>
+          <p class="chat-desc">Ask architectural, workflow, and implementation questions grounded in source code.</p>
+        </div>
+        <div class="chat-tools">
+          <button class="btn btn-ghost btn-sm" id="clear-chat-btn" title="Clear Conversation">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Suggested Prompts / Chips -->
+      <div class="query-suggestions" id="query-suggestions">
+        <span class="suggestions-label">Recommended questions:</span>
+        <button class="chip prompt-chip">Where is authentication handled?</button>
+        <button class="chip prompt-chip">How does the database connection work?</button>
+        <button class="chip prompt-chip">What are the main API endpoints?</button>
+        <button class="chip prompt-chip">How is error handling implemented?</button>
+      </div>
+
+      <!-- Chat Messages Container -->
+      <div class="chat-messages" id="chat-messages">
+        <div class="message assistant-message welcome-message">
+          <div class="message-avatar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div class="message-content">
+            <h3>Welcome to CodeRAG Assistant!</h3>
+            <p>I parse repository source code using <strong>Syntax-Aware Chunks</strong>, perform <strong>Hybrid Retrieval (BM25 + Semantic Search)</strong>, and synthesize grounded answers with direct line citations.</p>
+            <p>To begin, enter a GitHub repository URL on the left panel or click one of the preset repositories.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="chat-input-wrapper">
+        <form id="query-form" class="chat-input-form">
+          <textarea 
+            id="query-input" 
+            placeholder="Ask a technical question about the ingested codebase (e.g., 'Where is authentication handled?')..."
+            rows="2"
+            required
+          ></textarea>
+          <button type="submit" class="btn btn-primary send-btn" id="send-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </form>
+        <div class="input-meta">
+          <span>Press <code>Enter</code> to send, <code>Shift + Enter</code> for newline</span>
+          <span id="query-timer"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Pane: Live Code Viewer & Citation Inspector -->
+    <section class="viewer-pane" id="viewer-pane">
+      <div class="viewer-header">
+        <div class="file-breadcrumb">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+            <polyline points="13 2 13 9 20 9"></polyline>
+          </svg>
+          <span id="viewer-file-path">Select a file or click a citation</span>
+        </div>
+        <div class="viewer-actions">
+          <span class="badge" id="viewer-lang-badge">text</span>
+          <button class="btn btn-ghost btn-icon" id="copy-code-btn" title="Copy File Content">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="code-viewer-container" id="code-viewer-container">
+        <div class="code-empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          <p>No file selected</p>
+          <span>Click any citation link or file tree item to inspect code with highlighted line ranges.</span>
+        </div>
+        <div class="code-display" id="code-display" style="display: none;">
+          <div class="line-numbers" id="code-line-numbers"></div>
+          <pre class="code-lines" id="code-lines-content"></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Model & API Settings</h3>
+        <button class="btn-close" id="close-settings-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group">
+          <label for="provider-select">LLM Provider</label>
+          <select id="provider-select">
+            <option value="gemini">Google Gemini (Recommended - Free Tier)</option>
+            <option value="openai">OpenAI (GPT-4o mini)</option>
+            <option value="offline">Offline Heuristic Engine (Zero-Key Demo)</option>
+          </select>
+          <span class="input-hint">The Offline Engine generates accurate architectural summaries without requiring API keys!</span>
+        </div>
+
+        <div class="input-group" id="api-key-group">
+          <label for="api-key-input">API Key</label>
+          <input type="password" id="api-key-input" placeholder="Paste your Gemini or OpenAI API key here">
+          <span class="input-hint">Keys are kept in your browser memory and never stored insecurely on third-party servers.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancel-settings-btn">Cancel</button>
+        <button class="btn btn-primary" id="save-settings-btn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
